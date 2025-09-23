@@ -1,0 +1,6 @@
+clickhouse-connect
+pandas
+mlflow 
+scikit-learn 
+torch
+prefect
