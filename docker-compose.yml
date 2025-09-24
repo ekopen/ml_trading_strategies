@@ -94,6 +94,8 @@ services:
         condition: service_healthy
     volumes:
       - ./log_data:/app/log_data
+      - ./feature_data:/app/feature_data
+      - ./models:/app/models
     restart: unless-stopped
     stop_grace_period: 5s
 

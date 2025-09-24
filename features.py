@@ -1,26 +1,74 @@
+# feature.py
 # creates updated feature tables
-from config import market_data_clickhouse_ip
-import clickhouse_connect
 
-def market_clickhouse_client():      
-    client = clickhouse_connect.get_client(
-        host=market_data_clickhouse_ip,
-        port=8123,
-        username="default",   
-        password="mysecurepassword",
-        database="default"
-    )
-    return client
+import logging
+logger = logging.getLogger(__name__)
 
-def get_ochlv(client):
+def get_ochlv_minute(client):
     ochlv_df = client.query_df("""
         SELECT avg(price) AS price
         FROM ticks_db
-        WHERE timestamp > now() - INTERVAL 2 HOUR
+        WHERE timestamp > now() - INTERVAL 4 HOUR
         GROUP BY toStartOfMinute(timestamp)
         ORDER BY toStartOfMinute(timestamp) DESC
-        LIMIT 120                                
+        LIMIT 240                                
     """)
     return ochlv_df
 
+def get_ochlv_hour(client):
+    ochlv_df = client.query_df("""
+        SELECT avg(price) AS price
+        FROM ticks_db
+        WHERE timestamp > now() - INTERVAL 168 HOUR
+        GROUP BY toStartOfHour(timestamp)
+        ORDER BY toStartOfHour(timestamp) DESC
+        LIMIT 168                                
+    """)
+    return ochlv_df
 
+def build_features(df):
+    # standard features
+    df["returns"] = df["price"].pct_change()
+    df["sma_20"] = df["price"].rolling(window=20).mean()
+    df["sma_60"] = df["price"].rolling(window=60).mean()
+    df["momentum_10"] = df["price"] / df["price"].shift(10) - 1
+    df["momentum_30"] = df["price"] / df["price"].shift(30) - 1
+    df["volatility_30"] = df["returns"].rolling(window=30).std()
+    for lag in [1, 2, 5]:
+        df[f"lag_return_{lag}"] = df["returns"].shift(lag)
+
+    # RSI
+    delta = df["price"].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / loss
+    df["rsi_14"] = 100 - (100 / (1 + rs))
+
+    # MACD
+    ema12 = df["price"].ewm(span=12, adjust=False).mean()
+    ema26 = df["price"].ewm(span=26, adjust=False).mean()
+    df["macd"] = ema12 - ema26
+    df["macd_signal"] = df["macd"].ewm(span=9, adjust=False).mean()
+    
+    df = df.dropna()
+    return df
+
+def create_labels(df, horizon, threshold):
+    df["future_return"] = df["price"].shift(-horizon) / df["price"] - 1
+    df["label"] = 1  # HOLD
+    df.loc[df["future_return"] > threshold, "label"] = 2  # BUY
+    df.loc[df["future_return"] < -threshold, "label"] = 0  # SHORT/SELL
+    df = df.dropna()
+    return df
+
+def create_feature_data(client,minute_dir,hour_dir):
+
+    minute_df = get_ochlv_minute(client)
+    minute_df_features = build_features(minute_df)
+    minute_df_labels = create_labels(df = minute_df_features, horizon=5, threshold=.002)
+    minute_df_labels.to_parquet(minute_dir, index=False)
+
+    hour_df = get_ochlv_hour(client)
+    hour_df_features = build_features(hour_df)
+    hour_df_labels = create_labels(df = hour_df_features, horizon=3, threshold=.01)
+    hour_df_labels.to_parquet(hour_dir, index=False)
