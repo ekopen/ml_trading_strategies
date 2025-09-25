@@ -19,7 +19,7 @@ def market_clickhouse_client():
 
 def ml_clickhouse_client():
     return clickhouse_connect.get_client(
-        host="clickhouse", #clickhouse for docker, localhost for local dev 
+        host="localhost", #clickhouse for docker, localhost for local dev 
         port=8123,
         username="default",
         password="mysecurepassword",
@@ -32,18 +32,18 @@ s3 = boto3.client(
     aws_secret_access_key=AWS_SECRET_KEY,
 )
 
-try:
-    logger.info("Deleting tables.")
-    ch = ml_clickhouse_client
-    ch.command("DROP TABLE IF EXISTS model_runs SYNC")
-except Exception:
-    logger.warning("Error when deleting tables.")
+# try:
+#     logger.info("Deleting tables.")
+#     ch = ml_clickhouse_client()
+#     ch.command("DROP TABLE IF EXISTS model_runs SYNC")
+# except Exception:
+#     logger.warning("Error when deleting tables.")
 
 try:
     logger.info("Creating tables.")
     ch = ml_clickhouse_client()
     ch.command('''
-    CREATE TABLE model_runs (
+    CREATE TABLE IF NOT EXISTS model_runs (
         run_id UUID DEFAULT generateUUIDv4(),
         trained_at DateTime DEFAULT now(),
         model_name String,

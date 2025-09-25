@@ -3,7 +3,7 @@
 
 import threading, signal, logging, schedule, time
 from setup import market_clickhouse_client, ml_clickhouse_client
-from features import market_clickhouse_client, create_feature_data
+from features import create_feature_data
 from models import generate_models
 
 # logging 
@@ -32,19 +32,19 @@ def handle_signal(signum, frame):
 signal.signal(signal.SIGTERM, handle_signal)
 signal.signal(signal.SIGINT, handle_signal) # CTRL+C shutdown
 
+second_data_dir = "feature_data/second_features.parquet"
 minute_data_dir = "feature_data/minute_features.parquet"
-hour_data_dir = "feature_data/hour_features.parquet"
 model_dir = "models"
 market_client = market_clickhouse_client()
 ml_client = ml_clickhouse_client()
 
-def job_minute():
-    create_feature_data(market_client, minute_data_dir, hour_data_dir)
-    generate_models(minute_data_dir, model_dir, ml_client)
+def job_second():
+    create_feature_data(market_client, second_data_dir, minute_data_dir)
+    generate_models(second_data_dir, model_dir, ml_client)
 
-def job_hour():
-    create_feature_data(market_client, minute_data_dir, hour_data_dir)
-    generate_models(hour_data_dir, model_dir, ml_client)
+def job_minute():
+    create_feature_data(market_client, second_data_dir, minute_data_dir)
+    generate_models(minute_data_dir, model_dir, ml_client)
 
 # start/stop loop
 if __name__ == "__main__":
@@ -54,12 +54,16 @@ if __name__ == "__main__":
         # these currently run every hour/24 hours from the START of the program, vs the clock option
         # schedule.every().hour.at(":00").do(job_minute)
         # schedule.every().day.at("00:00").do(job_hour)
-        schedule.every(1).hours.do(job_minute)
-        schedule.every(24).hours.do(job_hour)
 
-        while not stop_event.is_set():
-             schedule.run_pending()
-             time.sleep(60)
+        # schedule.every(1).hours.do(job_minute)
+        # schedule.every(24).hours.do(job_hour)
+
+        job_second()
+        job_minute()
+
+        # while not stop_event.is_set():
+        #      schedule.run_pending()
+        #      time.sleep(1)
 
         logger.info("System shutdown complete.") 
 
