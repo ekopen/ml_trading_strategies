@@ -1,11 +1,10 @@
 # setup.py
-
 # one off container to run at the start
 # docker compose run --rm db_setup
 
-from config import MARKET_DATA_CLICKHOUSE_IP
+from config import MARKET_DATA_CLICKHOUSE_IP, AWS_ACCESS_KEY, AWS_SECRET_KEY
 import clickhouse_connect
-import logging
+import logging, boto3
 logger = logging.getLogger(__name__)
 
 def market_clickhouse_client():      
@@ -26,6 +25,12 @@ def ml_clickhouse_client():
         password="mysecurepassword",
         database="default"
     )
+
+s3 = boto3.client(
+    "s3",
+    aws_access_key_id=AWS_ACCESS_KEY,
+    aws_secret_access_key=AWS_SECRET_KEY,
+)
 
 try:
     logger.info("Deleting tables.")

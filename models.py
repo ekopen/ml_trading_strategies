@@ -1,17 +1,15 @@
 # models.py
-from config import AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_BUCKET
+# trains all ML models and publishes them to S3 for the trading model
+
+from config import AWS_BUCKET
+from setup import s3
 import pandas as pd
-import joblib, os, boto3
+import logging, joblib, os
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-
-s3 = boto3.client(
-    "s3",
-    aws_access_key_id=AWS_ACCESS_KEY,
-    aws_secret_access_key=AWS_SECRET_KEY,
-)
+logger = logging.getLogger(__name__)
 
 def load_dataset(path):
     df = pd.read_parquet(path)
@@ -21,26 +19,34 @@ def load_dataset(path):
     return X, y
 
 def train_and_eval(X, y, model, name, ch, s3_key):
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, shuffle=False
-    )
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-    train_acc = model.score(X_train, y_train)
-    test_acc = model.score(X_test, y_test)
-    report = classification_report(y_test, y_pred, digits=3, output_dict=True)
-    precision = report["weighted avg"]["precision"]
-    recall = report["weighted avg"]["recall"]
-    f1 = report["weighted avg"]["f1-score"]
+    try:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, shuffle=False
+        )
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        train_acc = model.score(X_train, y_train)
+        test_acc = model.score(X_test, y_test)
+        report = classification_report(y_test, y_pred, digits=3, output_dict=True)
+        precision = report["weighted avg"]["precision"]
+        recall = report["weighted avg"]["recall"]
+        f1 = report["weighted avg"]["f1-score"]
 
-    ch.insert('model_runs',
-        [(name, s3_key, train_acc, test_acc, precision, recall, f1)],
-        column_names=['model_name', 's3_key', 'train_accuracy', 'test_accuracy', 'precision', 'recall', 'f1'])
+        # stores model history in a clickhouse table
+        ch.insert('model_runs',
+            [(name, s3_key, train_acc, test_acc, precision, recall, f1)],
+            column_names=['model_name', 's3_key', 'train_accuracy', 'test_accuracy', 'precision', 'recall', 'f1'])     
+    except Exception as e:
+        print(f"Training/evaluation failed for {name}: {e}")
     
 def upload_to_cloud(local_path, s3_key):
-    s3.upload_file(local_path, AWS_BUCKET, s3_key)
-    return f"s3://{AWS_BUCKET}/{s3_key}"
-        
+    try:
+        s3.upload_file(local_path, AWS_BUCKET, s3_key)
+        return f"s3://{AWS_BUCKET}/{s3_key}"
+    except Exception as e:
+        print(f"S3 upload failed for {s3_key}: {e}")
+        return None 
+
 def generate_models(dataset, model_dir):
     X, y = load_dataset(dataset)
     dataset_name = os.path.splitext(os.path.basename(dataset))[0]

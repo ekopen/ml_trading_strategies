@@ -1,4 +1,5 @@
 # main.py
+# starts running the ML pipeline
 
 import threading, signal, logging, schedule, time
 from setup import market_clickhouse_client, ml_clickhouse_client
@@ -50,13 +51,15 @@ if __name__ == "__main__":
     try:
         logger.info("System starting.")
 
-        # these currently run every hour/24 hours from the START of the program, remove the 1 and 24 if we want to follow strict time rules
-        schedule.every(1).hour.at(":00").do(job_minute)
-        schedule.every(24).day.at("00:00").do(job_hour)
+        # these currently run every hour/24 hours from the START of the program, vs the clock option
+        # schedule.every().hour.at(":00").do(job_minute)
+        # schedule.every().day.at("00:00").do(job_hour)
+        schedule.every(1).hours.do(job_minute)
+        schedule.every(24).hours.do(job_hour)
 
         while not stop_event.is_set():
              schedule.run_pending()
-             time.sleep(1)
+             time.sleep(60)
 
         logger.info("System shutdown complete.") 
 

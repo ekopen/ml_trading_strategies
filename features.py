@@ -1,5 +1,5 @@
 # feature.py
-# creates updated feature tables
+# creates updated feature tables for both a one minute view and one hour view of the tick data
 
 import logging
 logger = logging.getLogger(__name__)
@@ -62,13 +62,18 @@ def create_labels(df, horizon, threshold):
     return df
 
 def create_feature_data(client,minute_dir,hour_dir):
+    try:
+        minute_df = get_ochlv_minute(client)
+        minute_df_features = build_features(minute_df)
+        minute_df_labels = create_labels(df = minute_df_features, horizon=5, threshold=.002)
+        minute_df_labels.to_parquet(minute_dir, index=False)
+    except Exception as e:
+        logger.exception("Minute feature pipeline failed: {e}")
 
-    minute_df = get_ochlv_minute(client)
-    minute_df_features = build_features(minute_df)
-    minute_df_labels = create_labels(df = minute_df_features, horizon=5, threshold=.002)
-    minute_df_labels.to_parquet(minute_dir, index=False)
-
-    hour_df = get_ochlv_hour(client)
-    hour_df_features = build_features(hour_df)
-    hour_df_labels = create_labels(df = hour_df_features, horizon=3, threshold=.01)
-    hour_df_labels.to_parquet(hour_dir, index=False)
+    try:
+        hour_df = get_ochlv_hour(client)
+        hour_df_features = build_features(hour_df)
+        hour_df_labels = create_labels(df = hour_df_features, horizon=3, threshold=.01)
+        hour_df_labels.to_parquet(hour_dir, index=False)
+    except Exception as e:
+        logger.exception("Hour feature pipeline failed: {e}")

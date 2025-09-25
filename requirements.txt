@@ -1,6 +1,9 @@
-clickhouse-connect
+
 pandas
-mlflow 
-scikit-learn 
-torch
-prefect
+numpy
+schedule
+joblib
+scikit-learn
+pyarrow
+clickhouse-connect
+boto3
