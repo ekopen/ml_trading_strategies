@@ -4,7 +4,7 @@
 import logging
 logger = logging.getLogger(__name__)
 
-def get_ochlv_seconds(client): #should yield about 40k rows to train on
+def get_ochlv_seconds(client): #should yield ~ 40k rows to train on
     ochlv_df = client.query_df("""
         SELECT 
             toStartOfInterval(timestamp, INTERVAL 15 SECOND) AS ts, 
@@ -16,7 +16,7 @@ def get_ochlv_seconds(client): #should yield about 40k rows to train on
     """)
     return ochlv_df
 
-def get_ochlv_minute(client): #should yield about 1000 rows to train on
+def get_ochlv_minute(client): #should yield ~ 1000 rows to train on
     ochlv_df = client.query_df("""
         SELECT toStartOfMinute(timestamp) AS ts, avg(price) AS price
         FROM ticks_db

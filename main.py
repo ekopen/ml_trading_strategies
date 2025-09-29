@@ -32,8 +32,8 @@ def handle_signal(signum, frame):
 signal.signal(signal.SIGTERM, handle_signal)
 signal.signal(signal.SIGINT, handle_signal) # CTRL+C shutdown
 
-second_data_dir = "feature_data/second_features.parquet"
-minute_data_dir = "feature_data/minute_features.parquet"
+second_data_dir = "feature_data/second_granularity.parquet"
+minute_data_dir = "feature_data/minute_granularity.parquet"
 model_dir = "models"
 market_client = market_clickhouse_client()
 ml_client = ml_clickhouse_client()
