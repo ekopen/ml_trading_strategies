@@ -51,19 +51,19 @@ if __name__ == "__main__":
     try:
         logger.info("System starting.")
 
-        # these currently run every hour/24 hours from the START of the program, vs the clock option
-        # schedule.every().hour.at(":00").do(job_minute)
-        # schedule.every().day.at("00:00").do(job_hour)
-
-        # schedule.every(1).hours.do(job_minute)
-        # schedule.every(24).hours.do(job_hour)
-
+        # run once immediately
         job_second()
         job_minute()
 
-        # while not stop_event.is_set():
-        #      schedule.run_pending()
-        #      time.sleep(1)
+        # these currently run every 8 hours/every 24 hours from the START of the program, vs the clock option
+        # schedule.every().hour.at(":00").do(job_minute)
+        # schedule.every().day.at("00:00").do(job_hour)
+        schedule.every(8).hours.do(job_second)
+        schedule.every(24).hours.do(job_minute)
+
+        while not stop_event.is_set():
+             schedule.run_pending()
+             time.sleep(1)
 
         logger.info("System shutdown complete.") 
 

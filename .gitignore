@@ -4,3 +4,9 @@
 
 /log_data/*
 !/log_data/.gitkeep
+
+/models/*
+!/models/.gitkeep
+
+/feature_data/*
+!/feature_data/.gitkeep

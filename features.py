@@ -4,25 +4,27 @@
 import logging
 logger = logging.getLogger(__name__)
 
+# this will have access to about a weeks worth of data
+
 def get_ochlv_seconds(client): #should yield ~ 40k rows to train on
     ochlv_df = client.query_df("""
         SELECT 
             toStartOfInterval(timestamp, INTERVAL 15 SECOND) AS ts, 
             avg(price) AS price
         FROM ticks_db
+        WHERE timestamp >= now() - INTERVAL 7 DAY
         GROUP BY ts
         ORDER BY ts DESC
-        LIMIT 40320
     """)
     return ochlv_df
 
-def get_ochlv_minute(client): #should yield ~ 1000 rows to train on
+def get_ochlv_minute(client): #should yield ~ 10k rows to train on
     ochlv_df = client.query_df("""
         SELECT toStartOfMinute(timestamp) AS ts, avg(price) AS price
         FROM ticks_db
-        GROUP BY toStartOfMinute(timestamp)
-        ORDER BY toStartOfMinute(timestamp) DESC
-        LIMIT 1080                                
+        WHERE timestamp >= now() - INTERVAL 7 DAY        
+        GROUP BY ts
+        ORDER BY ts DESC                             
     """)
     return ochlv_df
 
@@ -53,19 +55,19 @@ def build_features(df):
     df = df.dropna()
     return df
 
-def create_labels(df, horizon, threshold):
+def create_labels(df, horizon, buy_threshold, sell_threshold):
     df = df.copy()  # make sure it's not a view
     df["future_return"] = df["price"].shift(-horizon) / df["price"] - 1
     df["label"] = 1 # HOLD
-    df.loc[df["future_return"] > threshold, "label"] = 2 # BUY
-    df.loc[df["future_return"] < -threshold, "label"] = 0 # SELL
+    df.loc[df["future_return"] > buy_threshold, "label"] = 2 # BUY
+    df.loc[df["future_return"] < sell_threshold, "label"] = 0 # SELL
     return df.dropna()
 
 def create_feature_data(client,second_dir,minute_dir):
     try:
         second_df = get_ochlv_seconds(client)
         second_df_features = build_features(second_df)
-        second_df_labels = create_labels(df = second_df_features, horizon=20, threshold=.0002)
+        second_df_labels = create_labels(df = second_df_features, horizon=20, buy_threshold=.0005, sell_threshold=-.0005)
         second_df_labels.to_parquet(second_dir, index=False)
     except Exception as e:
         logger.exception(f"Second feature pipeline failed: {e}")
@@ -73,7 +75,7 @@ def create_feature_data(client,second_dir,minute_dir):
     try:
         minute_df = get_ochlv_minute(client)
         minute_df_features = build_features(minute_df)
-        minute_df_labels = create_labels(df = minute_df_features, horizon=5, threshold=.001)
+        minute_df_labels = create_labels(df = minute_df_features, horizon=5, buy_threshold=.001, sell_threshold=-.001)
         minute_df_labels.to_parquet(minute_dir, index=False)
     except Exception as e:
         logger.exception(f"Minute feature pipeline failed: {e}")

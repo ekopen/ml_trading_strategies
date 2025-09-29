@@ -23,7 +23,6 @@ def load_dataset(path):
     feature_cols = [c for c in df.columns if c not in ["price", "future_return", "label","ts"]]
     X = df[feature_cols]
     y = df["label"]
-    print(y.value_counts(normalize=True))
     return X, y
 
 def train_and_eval(X, y, model, name, client, s3_key):
@@ -40,7 +39,6 @@ def train_and_eval(X, y, model, name, client, s3_key):
         precision = report["weighted avg"]["precision"]
         recall = report["weighted avg"]["recall"]
         f1 = report["weighted avg"]["f1-score"]
-        print(classification_report(y_test, y_pred, digits=3, zero_division=0))
 
         # stores model history in a clickhouse table
         client.insert('model_runs',
@@ -52,7 +50,7 @@ def train_and_eval(X, y, model, name, client, s3_key):
 def upload_to_cloud(local_path, s3_key):
     try:
         s3.upload_file(local_path, AWS_BUCKET, s3_key)
-        return f"s3://{AWS_BUCKET}/{s3_key}"
+        logger.info(f"Upload complete for {local_path} at s3://{AWS_BUCKET}/{s3_key}")
     except Exception as e:
         print(f"S3 upload failed for {s3_key}: {e}")
         return None 

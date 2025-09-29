@@ -19,7 +19,7 @@ def market_clickhouse_client():
 
 def ml_clickhouse_client():
     return clickhouse_connect.get_client(
-        host="localhost", #clickhouse for docker, localhost for local dev 
+        host="clickhouse", #clickhouse for docker, localhost for local dev 
         port=8123,
         username="default",
         password="mysecurepassword",
@@ -42,6 +42,7 @@ s3 = boto3.client(
 try:
     logger.info("Creating tables.")
     ch = ml_clickhouse_client()
+    # training performance table
     ch.command('''
     CREATE TABLE IF NOT EXISTS model_runs (
         run_id UUID DEFAULT generateUUIDv4(),
