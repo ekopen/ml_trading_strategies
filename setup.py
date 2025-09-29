@@ -32,17 +32,7 @@ s3 = boto3.client(
     aws_secret_access_key=AWS_SECRET_KEY,
 )
 
-# try:
-#     logger.info("Deleting tables.")
-#     ch = ml_clickhouse_client()
-#     ch.command("DROP TABLE IF EXISTS model_runs SYNC")
-# except Exception:
-#     logger.warning("Error when deleting tables.")
-
-try:
-    logger.info("Creating tables.")
-    ch = ml_clickhouse_client()
-    # training performance table
+def create_model_runs_db():
     ch.command('''
     CREATE TABLE IF NOT EXISTS model_runs (
         run_id UUID DEFAULT generateUUIDv4(),
@@ -58,6 +48,10 @@ try:
     ENGINE = MergeTree()
     ORDER BY (trained_at);
     ''')
-except Exception:
-    logger.warning("Error when creating tables.")
+
+# try:
+#     logger.info("Creating tables.")
+#     create_model_runs_db()
+# except Exception:
+#     logger.warning("Error when creating tables.")
 

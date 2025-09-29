@@ -20,6 +20,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    mem_limit: 512m
 
   grafana:
     image: grafana/grafana:latest
@@ -45,6 +46,8 @@ services:
       - ./provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./dashboards:/var/lib/grafana/dashboards
     restart: unless-stopped
+    mem_limit: 256m
+    
 
 # ----------- monitoring ----------------#
 
@@ -60,6 +63,7 @@ services:
       options:
         max-size: "50m"
         max-file: "3"
+    mem_limit: 128m
 
   # scrapes endpoints for metrics/alerts. the central "brain"
   prometheus:
@@ -80,6 +84,7 @@ services:
       options:
         max-size: "50m"
         max-file: "3"
+    mem_limit: 256m
 
 # # ----------- main_app ----------------#
   main_app:
@@ -98,6 +103,7 @@ services:
       - ./models:/app/models
     restart: unless-stopped
     stop_grace_period: 5s
+    mem_limit: 768m
 
 # # ----------- setup ----------------#
   db_setup:
