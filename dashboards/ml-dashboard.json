@@ -112,7 +112,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 167
+                "value": 156
               },
               {
                 "id": "custom.cellOptions",
@@ -159,7 +159,12 @@
         "cellHeight": "lg",
         "enablePagination": false,
         "showHeader": true,
-        "sortBy": []
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "hours_since_trained"
+          }
+        ]
       },
       "pluginVersion": "12.2.0",
       "targets": [
@@ -182,7 +187,7 @@
           },
           "pluginVersion": "4.10.2",
           "queryType": "table",
-          "rawSql": "SELECT model_name, model_description, (now() - trained_at)/60/60 as hours_since_trained, train_accuracy, test_accuracy, precision, recall, f1\r\nFROM model_runs\r\nORDER BY hours_since_trained\r\nLIMIT 6\r\n",
+          "rawSql": "SELECT model_name, model_description, (now() - trained_at)/60/60 as hours_since_trained, train_accuracy, test_accuracy, precision, recall, f1\r\nFROM model_runs\r\nORDER BY hours_since_trained\r\nLIMIT 5\r\n",
           "refId": "A"
         }
       ],
