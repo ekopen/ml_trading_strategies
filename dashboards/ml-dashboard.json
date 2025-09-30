@@ -94,7 +94,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 361
+                "value": 247
               },
               {
                 "id": "custom.cellOptions",
@@ -112,7 +112,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 146
+                "value": 167
               },
               {
                 "id": "custom.cellOptions",
@@ -131,6 +131,18 @@
               {
                 "id": "custom.width",
                 "value": 225
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "model_description"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 336
               }
             ]
           }
