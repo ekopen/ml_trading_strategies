@@ -1,12 +1,11 @@
 # setup.py
-# one off container to run at the start
-# docker compose run --rm db_setup
 
 from config import MARKET_DATA_CLICKHOUSE_IP, AWS_ACCESS_KEY, AWS_SECRET_KEY
 import clickhouse_connect
 import logging, boto3
 logger = logging.getLogger(__name__)
 
+# connects to the data storage module
 def market_clickhouse_client():      
     client = clickhouse_connect.get_client(
         host=MARKET_DATA_CLICKHOUSE_IP,
@@ -31,27 +30,3 @@ s3 = boto3.client(
     aws_access_key_id=AWS_ACCESS_KEY,
     aws_secret_access_key=AWS_SECRET_KEY,
 )
-
-def create_model_runs_db():
-    ch.command('''
-    CREATE TABLE IF NOT EXISTS model_runs (
-        run_id UUID DEFAULT generateUUIDv4(),
-        trained_at DateTime DEFAULT now(),
-        model_name String,
-        s3_key String,
-        train_accuracy Float64,
-        test_accuracy Float64,
-        precision Float64,
-        recall Float64,
-        f1 Float64               
-    ) 
-    ENGINE = MergeTree()
-    ORDER BY (trained_at);
-    ''')
-
-# try:
-#     logger.info("Creating tables.")
-#     create_model_runs_db()
-# except Exception:
-#     logger.warning("Error when creating tables.")
-

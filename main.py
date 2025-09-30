@@ -4,11 +4,10 @@
 import threading, signal, logging, schedule, time
 from setup import market_clickhouse_client, ml_clickhouse_client
 from features import create_feature_data
-from models import generate_models
-
-# logging 
+from training import train_models
+from models import models
 from logging.handlers import RotatingFileHandler
-# logging 
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -32,19 +31,16 @@ def handle_signal(signum, frame):
 signal.signal(signal.SIGTERM, handle_signal)
 signal.signal(signal.SIGINT, handle_signal) # CTRL+C shutdown
 
-second_data_dir = "feature_data/second_granularity.parquet"
-minute_data_dir = "feature_data/minute_granularity.parquet"
+# directories and data
+feature_dir = "feature_data/feature_data.parquet"
 model_dir = "models"
 market_client = market_clickhouse_client()
 ml_client = ml_clickhouse_client()
 
-def job_second():
-    create_feature_data(market_client, second_data_dir, minute_data_dir)
-    generate_models(second_data_dir, model_dir, ml_client)
-
-def job_minute():
-    create_feature_data(market_client, second_data_dir, minute_data_dir)
-    generate_models(minute_data_dir, model_dir, ml_client)
+# run end to end pipeline
+def run_model_pipeline():
+    create_feature_data(market_client, feature_dir)
+    train_models(feature_dir, model_dir, ml_client, models)
 
 # start/stop loop
 if __name__ == "__main__":
@@ -52,14 +48,11 @@ if __name__ == "__main__":
         logger.info("System starting.")
 
         # run once immediately
-        job_second()
-        job_minute()
+        run_model_pipeline()
 
-        # these currently run every 8 hours/every 24 hours from the START of the program, vs the clock option
-        # schedule.every().hour.at(":00").do(job_minute)
-        # schedule.every().day.at("00:00").do(job_hour)
-        schedule.every(8).hours.do(job_second)
-        schedule.every(24).hours.do(job_minute)
+        # these currently run every 12 hours from the START of the program, vs the clock option
+        # schedule.every().day.at("00:00").do(run_model_pipeline)
+        schedule.every(12).hours.do(run_model_pipeline)
 
         while not stop_event.is_set():
              schedule.run_pending()

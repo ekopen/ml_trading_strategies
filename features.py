@@ -5,20 +5,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 # this will have access to about a weeks worth of data
-
-def get_ochlv_seconds(client): #should yield ~ 40k rows to train on
-    ochlv_df = client.query_df("""
-        SELECT 
-            toStartOfInterval(timestamp, INTERVAL 15 SECOND) AS ts, 
-            avg(price) AS price
-        FROM ticks_db
-        WHERE timestamp >= now() - INTERVAL 7 DAY
-        GROUP BY ts
-        ORDER BY ts DESC
-    """)
-    return ochlv_df
-
-def get_ochlv_minute(client): #should yield ~ 10k rows to train on
+# should yield ~ 10k rows to train on
+def get_ochlv(client): 
     ochlv_df = client.query_df("""
         SELECT toStartOfMinute(timestamp) AS ts, avg(price) AS price
         FROM ticks_db
@@ -63,19 +51,14 @@ def create_labels(df, horizon, buy_threshold, sell_threshold):
     df.loc[df["future_return"] < sell_threshold, "label"] = 0 # SELL
     return df.dropna()
 
-def create_feature_data(client,second_dir,minute_dir):
+# saves a feature parquet locally for model training
+def create_feature_data(client,feature_dir):
+    logger.info("Creating feature data.")
     try:
-        second_df = get_ochlv_seconds(client)
-        second_df_features = build_features(second_df)
-        second_df_labels = create_labels(df = second_df_features, horizon=20, buy_threshold=.0005, sell_threshold=-.0005)
-        second_df_labels.to_parquet(second_dir, index=False)
+        ochlv_df = get_ochlv(client)
+        df_features = build_features(ochlv_df)
+        df_labels = create_labels(df = df_features, horizon=20, buy_threshold=.0005, sell_threshold=-.0005)
+        df_labels.to_parquet(feature_dir, index=False)
+        logger.info("Creatied feature data.")
     except Exception as e:
-        logger.exception(f"Second feature pipeline failed: {e}")
-
-    try:
-        minute_df = get_ochlv_minute(client)
-        minute_df_features = build_features(minute_df)
-        minute_df_labels = create_labels(df = minute_df_features, horizon=5, buy_threshold=.001, sell_threshold=-.001)
-        minute_df_labels.to_parquet(minute_dir, index=False)
-    except Exception as e:
-        logger.exception(f"Minute feature pipeline failed: {e}")
+        logger.exception(f"Feature pipeline failed: {e}")

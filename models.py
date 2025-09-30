@@ -1,78 +1,64 @@
 # models.py
-# trains all ML models and publishes them to S3 for the trading model
+# contains all model related information used by training
 
-from config import AWS_BUCKET
-from setup import s3
-import pandas as pd
-import logging, joblib, os
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+from scikeras.wrappers import KerasClassifier
+from tensorflow.keras import Input
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+import logging
 logger = logging.getLogger(__name__)
+
+def build_lstm(input_shape, num_classes=3):
+    model = Sequential([
+        Input(shape=input_shape),
+        LSTM(32),
+        Dense(num_classes, activation="softmax")
+    ])
+    model.compile(optimizer="adam",
+                  loss="sparse_categorical_crossentropy",
+                  metrics=["accuracy"])
+    return model
+
+def build_lstm_model():
+    return build_lstm((30, 1))
 
 model = make_pipeline(
     StandardScaler(),
     LogisticRegression(max_iter=2000, solver="lbfgs")
 )
 
-def load_dataset(path):
-    df = pd.read_parquet(path)
-    feature_cols = [c for c in df.columns if c not in ["price", "future_return", "label","ts"]]
-    X = df[feature_cols]
-    y = df["label"]
-    return X, y
-
-def train_and_eval(X, y, model, name, client, s3_key):
-    logger.info(f"Training model: {name}")
-    try:
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, shuffle=False
-        )
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        train_acc = model.score(X_train, y_train)
-        test_acc = model.score(X_test, y_test)
-        report = classification_report(y_test, y_pred, digits=3, output_dict=True, zero_division=0)
-        precision = report["weighted avg"]["precision"]
-        recall = report["weighted avg"]["recall"]
-        f1 = report["weighted avg"]["f1-score"]
-
-        # stores model history in a clickhouse table
-        client.insert('model_runs',
-            [(name, s3_key, train_acc, test_acc, precision, recall, f1)],
-            column_names=['model_name', 's3_key', 'train_accuracy', 'test_accuracy', 'precision', 'recall', 'f1'])     
-    except Exception as e:
-        print(f"Training/evaluation failed for {name}: {e}")
-    
-def upload_to_cloud(local_path, s3_key):
-    try:
-        s3.upload_file(local_path, AWS_BUCKET, s3_key)
-        logger.info(f"Upload complete for {local_path} at s3://{AWS_BUCKET}/{s3_key}")
-    except Exception as e:
-        print(f"S3 upload failed for {s3_key}: {e}")
-        return None 
-
-def generate_models(dataset, model_dir, client):
-    X, y = load_dataset(dataset)
-    dataset_name = os.path.splitext(os.path.basename(dataset))[0]
-    models = [
-        (make_pipeline(StandardScaler(),
-               LogisticRegression(max_iter=500, solver="lbfgs")),
-                f"Logistic Regression - {dataset_name}"),
-        (RandomForestClassifier(n_estimators=100, random_state=42), f"Random Forest - {dataset_name}"),
-        (GradientBoostingClassifier(n_estimators=100, random_state=42), f"Gradient Boosting - {dataset_name}")
-    ]
-    for model, name in models:
-        safe_name = name.replace(" ", "_").lower()
-        s3_key = f"models/{safe_name}.pkl"
-        filename = f"{safe_name}.pkl"
-        filepath = f"{model_dir}/{filename}"
-        train_and_eval(X, y, model, safe_name, client, s3_key)
-        joblib.dump(model, filepath)
-        upload_to_cloud(filepath, s3_key)
-
-
-
+models = [
+    (
+        make_pipeline(StandardScaler(), LogisticRegression(max_iter=500, solver="lbfgs")),
+        "Logistic Regression",
+        "Simple linear baseline"
+    ),
+    (
+        RandomForestClassifier(n_estimators=50, random_state=42),
+        "Random Forest",
+        "Splits data with many trees"
+    ),
+    (
+        GradientBoostingClassifier(n_estimators=100, random_state=42),
+        "Gradient Boosting",
+        "Builds strong ensemble step by step"
+    ),
+    (
+        make_pipeline(StandardScaler(), SVC(kernel="rbf", C=1.0, probability=True, random_state=42)),
+        "SVM (RBF Kernel)",
+        "Finds complex decision boundaries"
+    ),
+    (
+        KerasClassifier(model=build_lstm_model, epochs=5, batch_size=32, verbose=0),
+        "LSTM",
+        "Learns patterns over time in sequences"
+    )
+]

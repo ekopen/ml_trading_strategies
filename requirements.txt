@@ -1,9 +1,11 @@
-
 pandas
 numpy
-schedule
-joblib
 scikit-learn
-pyarrow
+tensorflow
+joblib
+schedule
 clickhouse-connect
 boto3
+scikeras
+pyarrow
+fastparquet
