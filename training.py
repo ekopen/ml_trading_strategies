@@ -6,6 +6,7 @@ from setup import s3
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 import pandas as pd
+from tensorflow.keras.models import save_model
 import logging, joblib, os
 logger = logging.getLogger(__name__)
 
@@ -51,11 +52,20 @@ def train_models(dataset, model_dir, client, models):
     X, y = load_dataset(dataset)
     for model, name, description in models:
         safe_name = name.replace(" ", "_").lower()
-        s3_key = f"models/{safe_name}.pkl"
-        filename = f"{safe_name}.pkl"
-        filepath = f"{model_dir}/{filename}"
-        train_and_eval(X, y, model, safe_name, description, client, s3_key)
-        joblib.dump(model, filepath)
+
+        if "lstm" in safe_name:  # save keras models separately for lstm
+            s3_key = f"models/{safe_name}.h5"
+            filename = f"{safe_name}.h5"
+            filepath = os.path.join(model_dir, filename)
+            train_and_eval(X, y, model, safe_name, description, client, s3_key)
+            model.model_.save(filepath)
+        else:
+            s3_key = f"models/{safe_name}.pkl"
+            filename = f"{safe_name}.pkl"
+            filepath = os.path.join(model_dir, filename)
+            train_and_eval(X, y, model, safe_name, description, client, s3_key)
+            joblib.dump(model, filepath)
+
         upload_to_cloud(filepath, s3_key)
 
 

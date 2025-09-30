@@ -49,7 +49,17 @@ def create_labels(df, horizon, buy_threshold, sell_threshold):
     df["label"] = 1 # HOLD
     df.loc[df["future_return"] > buy_threshold, "label"] = 2 # BUY
     df.loc[df["future_return"] < sell_threshold, "label"] = 0 # SELL
-    return df.dropna()
+
+    df = df.dropna()
+
+    # log label distribution
+    counts = df["label"].value_counts(normalize=True).sort_index()
+    logger.info(
+        f"Label distribution (SELL=0, HOLD=1, BUY=2): "
+        f"{counts.to_dict()}"
+    )
+
+    return df
 
 # saves a feature parquet locally for model training
 def create_feature_data(client,feature_dir):
@@ -57,8 +67,8 @@ def create_feature_data(client,feature_dir):
     try:
         ochlv_df = get_ochlv(client)
         df_features = build_features(ochlv_df)
-        df_labels = create_labels(df = df_features, horizon=20, buy_threshold=.0005, sell_threshold=-.0005)
+        df_labels = create_labels(df = df_features, horizon=20, buy_threshold=.00085, sell_threshold=-.00055)
         df_labels.to_parquet(feature_dir, index=False)
-        logger.info("Creatied feature data.")
+        logger.info("Created feature data.")
     except Exception as e:
         logger.exception(f"Feature pipeline failed: {e}")

@@ -94,7 +94,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 247
+                "value": 203
               },
               {
                 "id": "custom.cellOptions",
@@ -112,7 +112,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 156
+                "value": 182
               },
               {
                 "id": "custom.cellOptions",
@@ -142,7 +142,67 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 336
+                "value": 588
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "train_accuracy"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 190
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "f1"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 178
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "recall"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 209
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "precision"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 204
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "test_accuracy"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 216
               }
             ]
           }
@@ -162,7 +222,7 @@
         "sortBy": [
           {
             "desc": false,
-            "displayName": "hours_since_trained"
+            "displayName": "model_name"
           }
         ]
       },
@@ -283,5 +343,5 @@
   "timezone": "browser",
   "title": "ML Trading Strategies",
   "uid": "adgkt7m",
-  "version": 12
+  "version": 15
 }

@@ -39,26 +39,26 @@ models = [
     (
         make_pipeline(StandardScaler(), LogisticRegression(max_iter=500, solver="lbfgs")),
         "Logistic Regression",
-        "Simple linear baseline"
+        "A linear baseline model for classification tasks."
     ),
     (
         RandomForestClassifier(n_estimators=50, random_state=42),
         "Random Forest",
-        "Splits data with many trees"
+        "Ensemble of decision trees that captures non-linear relationships."
     ),
     (
         GradientBoostingClassifier(n_estimators=100, random_state=42),
         "Gradient Boosting",
-        "Builds strong ensemble step by step"
+        "Sequentially builds an ensemble to reduce errors and improve accuracy."
     ),
     (
         make_pipeline(StandardScaler(), SVC(kernel="rbf", C=1.0, probability=True, random_state=42)),
         "SVM (RBF Kernel)",
-        "Finds complex decision boundaries"
+        "Separates classes using non-linear decision boundaries."
     ),
     (
         KerasClassifier(model=build_lstm_model, epochs=5, batch_size=32, verbose=0),
         "LSTM",
-        "Learns patterns over time in sequences"
+        "Captures temporal dependencies and sequential patterns in data."
     )
 ]
