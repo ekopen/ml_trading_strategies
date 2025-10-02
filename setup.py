@@ -1,6 +1,6 @@
 # setup.py
 
-from config import MARKET_DATA_CLICKHOUSE_IP, AWS_ACCESS_KEY, AWS_SECRET_KEY
+from config import MARKET_DATA_CLICKHOUSE_IP, AWS_ACCESS_KEY, AWS_SECRET_KEY, CLICKHOUSE_USERNAME, CLICKHOUSE_PASSWORD
 import clickhouse_connect
 import logging, boto3
 logger = logging.getLogger(__name__)
@@ -10,8 +10,8 @@ def market_clickhouse_client():
     client = clickhouse_connect.get_client(
         host=MARKET_DATA_CLICKHOUSE_IP,
         port=8123,
-        username="default",   
-        password="mysecurepassword",
+        username=CLICKHOUSE_USERNAME,
+        password=CLICKHOUSE_PASSWORD,
         database="default"
     )
     return client
@@ -20,8 +20,8 @@ def ml_clickhouse_client():
     return clickhouse_connect.get_client(
         host="clickhouse", #clickhouse for docker, localhost for local dev 
         port=8123,
-        username="default",
-        password="mysecurepassword",
+        username=CLICKHOUSE_USERNAME,
+        password=CLICKHOUSE_PASSWORD,
         database="default"
     )
 

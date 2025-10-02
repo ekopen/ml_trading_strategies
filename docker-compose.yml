@@ -11,12 +11,12 @@ services:
     volumes:
       - clickhouse_data:/var/lib/clickhouse
     environment:
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: mysecurepassword
+      CLICKHOUSE_USER: ${CLICKHOUSE_USERNAME}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
     restart: unless-stopped
 
     healthcheck:
-      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' --user=default --password=mysecurepassword || exit 1"]
+      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' --user=${CLICKHOUSE_USERNAME} --password=${CLICKHOUSE_PASSWORD} || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -30,8 +30,8 @@ services:
       clickhouse:
         condition: service_healthy
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USERNAME}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
       # Install the official ClickHouse datasource plugin
       GF_INSTALL_PLUGINS: grafana-clickhouse-datasource
       # For local testing you typically don't need domain/root_url settings
@@ -96,18 +96,9 @@ services:
     volumes:
       - ./log_data:/app/log_data
       - ./feature_data:/app/feature_data
-      - ./models:/app/models
+      - ./model_data:/app/model_data
     restart: unless-stopped
     stop_grace_period: 5s
-
-# # ----------- setup ----------------#
-  db_setup:
-    build: .
-    command: ["python", "setup.py"]
-    depends_on:
-      clickhouse:
-        condition: service_healthy
-    profiles: ["setup"]
 
 volumes:
   clickhouse_data:

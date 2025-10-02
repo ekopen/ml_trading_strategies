@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS model_runs (
     model_name String,
     model_description String,
     s3_key String,
+    retrain_interval Float64,
     train_accuracy Float64,
     test_accuracy Float64,
     precision Float64,

@@ -1,20 +1,18 @@
 # feature.py
-# creates updated feature tables for both a one minute view and one hour view of the tick data
-
+# creates updated feature tables for training
 import logging
 logger = logging.getLogger(__name__)
 
 # this will have access to about a weeks worth of data
 # should yield ~ 10k rows to train on
-def get_ochlv(client): 
-    ochlv_df = client.query_df("""
-        SELECT toStartOfMinute(timestamp) AS ts, avg(price) AS price
-        FROM ticks_db
-        WHERE timestamp >= now() - INTERVAL 7 DAY        
-        GROUP BY ts
-        ORDER BY ts DESC                             
+def get_data(client, symbol): 
+    df = client.query_df(f"""
+        SELECT minute, open as price
+        FROM minute_bars_final
+        WHERE symbol = '{symbol}'
+        ORDER BY minute ASC                             
     """)
-    return ochlv_df
+    return df
 
 def build_features(df):
     # standard features
@@ -32,7 +30,7 @@ def build_features(df):
     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
     rs = gain / loss
-    df["14"] = 100 - (100 / (1 + rs))
+    df["rsi_14"] = 100 - (100 / (1 + rs))
 
     # MACD
     ema12 = df["price"].ewm(span=12, adjust=False).mean()
@@ -43,32 +41,17 @@ def build_features(df):
     df = df.dropna()
     return df
 
-def create_labels(df, horizon, buy_threshold, sell_threshold):
+def create_labels(df, horizon, buy_q, sell_q):
     df = df.copy()  # make sure it's not a view
     df["future_return"] = df["price"].shift(-horizon) / df["price"] - 1
-    df["label"] = 1 # HOLD
-    df.loc[df["future_return"] > buy_threshold, "label"] = 2 # BUY
-    df.loc[df["future_return"] < sell_threshold, "label"] = 0 # SELL
+    # compute dynamic thresholds
+    upper = df["future_return"].quantile(buy_q)
+    lower = df["future_return"].quantile(sell_q)
+
+    df["label"] = 1  # HOLD by default
+    df.loc[df["future_return"] > upper, "label"] = 2  # BUY
+    df.loc[df["future_return"] < lower, "label"] = 0  # SELL
 
     df = df.dropna()
-
-    # log label distribution
     counts = df["label"].value_counts(normalize=True).sort_index()
-    logger.info(
-        f"Label distribution (SELL=0, HOLD=1, BUY=2): "
-        f"{counts.to_dict()}"
-    )
-
-    return df
-
-# saves a feature parquet locally for model training
-def create_feature_data(client,feature_dir):
-    logger.info("Creating feature data.")
-    try:
-        ochlv_df = get_ochlv(client)
-        df_features = build_features(ochlv_df)
-        df_labels = create_labels(df = df_features, horizon=20, buy_threshold=.00085, sell_threshold=-.00055)
-        df_labels.to_parquet(feature_dir, index=False)
-        logger.info("Created feature data.")
-    except Exception as e:
-        logger.exception(f"Feature pipeline failed: {e}")
+    return df, counts
